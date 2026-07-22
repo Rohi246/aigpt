@@ -2,10 +2,22 @@ import { supabase } from '../lib/supabase/client';
 
 const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/audit-engine`;
 
+function normalizeUrl(raw: string): string {
+  let u = raw.trim();
+  if (!u.match(/^https?:\/\//i)) u = 'https://' + u;
+  try {
+    const parsed = new URL(u);
+    return parsed.origin + parsed.pathname.replace(/\/$/, '') + parsed.search;
+  } catch {
+    return u.toLowerCase();
+  }
+}
+
 export async function startAudit(url: string): Promise<{ auditId: string }> {
+  const normalized = normalizeUrl(url);
   const { data, error } = await supabase
     .from('audits')
-    .insert({ url, status: 'pending' })
+    .insert({ url, normalized_url: normalized, status: 'pending' })
     .select('id')
     .single();
 
